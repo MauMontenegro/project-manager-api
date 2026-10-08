@@ -24,14 +24,25 @@ class Settings(BaseSettings):
     def database_url(self) -> str:
         if self.DATABASE_URL:
             return self.DATABASE_URL
-        return URL.create(
-            "postgresql+asyncpg",
-            username=self.POSTGRES_USER,
-            password=self.POSTGRES_PASSWORD,
-            host=self.POSTGRES_HOST,
-            port=self.POSTGRES_PORT,
-            database=self.POSTGRES_DB,
-        ).render_as_string(hide_password=False)
+        if self.POSTGRES_HOST.startswith("/"):
+            # Socket Unix (Cloud SQL en Cloud Run: /cloudsql/PROYECTO:REGION:INSTANCIA)
+            url = URL.create(
+                "postgresql+asyncpg",
+                username=self.POSTGRES_USER,
+                password=self.POSTGRES_PASSWORD,
+                database=self.POSTGRES_DB,
+                query={"host": self.POSTGRES_HOST},
+            )
+        else:
+            url = URL.create(
+                "postgresql+asyncpg",
+                username=self.POSTGRES_USER,
+                password=self.POSTGRES_PASSWORD,
+                host=self.POSTGRES_HOST,
+                port=self.POSTGRES_PORT,
+                database=self.POSTGRES_DB,
+            )
+        return url.render_as_string(hide_password=False)
 
 
 @lru_cache

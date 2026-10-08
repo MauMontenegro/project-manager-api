@@ -1,0 +1,112 @@
+# Pipeline CI/CD → Google Cloud Run
+#
+#   development → servicio "<SERVICE_NAME>-dev"  (automático)
+#   master      → servicio "<SERVICE_NAME>"      (deploy manual)
+#
+# Variables requeridas en GitLab (Settings > CI/CD > Variables): ver DEPLOY.md.
+# RUN_EXTRA_FLAGS (opcional): flags extra de gcloud, p. ej. red VPC o Cloud SQL.
+
+stages:
+  - test
+  - build
+  - migrate
+  - deploy
+
+default:
+  image: google/cloud-sdk:slim
+
+variables:
+  SERVICE_NAME: project-manager-api
+  AR_REPOSITORY: ms
+  IMAGE: ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPOSITORY}/${SERVICE_NAME}
+
+.gcloud_auth:
+  before_script:
+    - gcloud auth activate-service-account --key-file="$GCP_SA_KEY"
+    - gcloud config set project "$GCP_PROJECT_ID"
+    - gcloud config set run/region "$GCP_REGION"
+
+# Entorno según la rama
+.env_development:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "development"
+  variables:
+    RUN_SERVICE: ${SERVICE_NAME}-dev
+
+.env_production:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    RUN_SERVICE: ${SERVICE_NAME}
+
+# ---------- test ----------
+test:syntax:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - pip install --quiet -r requirements.txt
+    - python -c "import app.main"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# ---------- build (Cloud Build → Artifact Registry) ----------
+build:
+  stage: build
+  extends: .gcloud_auth
+  script:
+    - gcloud builds submit --tag "$IMAGE:$CI_COMMIT_SHORT_SHA" --quiet .
+  rules:
+    - if: $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ---------- migraciones (Cloud Run Job, una sola ejecución por deploy) ----------
+.migrate:
+  stage: migrate
+  extends: .gcloud_auth
+  script:
+    - |
+      gcloud run jobs deploy "${RUN_SERVICE}-migrate" \
+        --image "$IMAGE:$CI_COMMIT_SHORT_SHA" \
+        --command alembic --args upgrade,head \
+        --set-env-vars "^@^DATABASE_URL=${APP_DATABASE_URL}" \
+        $RUN_EXTRA_FLAGS \
+        --max-retries 0 \
+        --execute-now --wait
+
+migrate:development:
+  extends: [.migrate, .env_development]
+
+migrate:production:
+  extends: [.migrate, .env_production]
+  needs: ["build"]
+
+# ---------- deploy ----------
+.deploy:
+  stage: deploy
+  extends: .gcloud_auth
+  script:
+    - |
+      gcloud run deploy "$RUN_SERVICE" \
+        --image "$IMAGE:$CI_COMMIT_SHORT_SHA" \
+        --set-env-vars "^@^DATABASE_URL=${APP_DATABASE_URL}@CORS_ORIGINS=${CORS_ORIGINS}" \
+        $RUN_EXTRA_FLAGS \
+        --port 8080 \
+        --min-instances 0 \
+        --max-instances 5 \
+        --memory 512Mi \
+        --no-allow-unauthenticated \
+        --quiet
+    - gcloud run services describe "$RUN_SERVICE" --format 'value(status.url)'
+
+deploy:development:
+  extends: [.deploy, .env_development]
+  needs: ["migrate:development"]
+  environment:
+    name: development
+
+deploy:production:
+  extends: [.deploy, .env_production]
+  needs: ["migrate:production"]
+  when: manual
+  environment:
+    name: production
