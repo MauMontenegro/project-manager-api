@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -18,8 +17,6 @@ if TYPE_CHECKING:
 class AsignacionRecurso(Base):
     __tablename__ = "asignacion_recurso"
     __table_args__ = (
-        CheckConstraint("horas_asignadas > 0", name="horas_positivas"),
-        CheckConstraint("porcentaje_utilizacion BETWEEN 0 AND 100", name="utilizacion_valida"),
         UniqueConstraint("id_usuario", "id_etapa", name="uq_asignacion_usuario_etapa"),
     )
 
@@ -34,8 +31,6 @@ class AsignacionRecurso(Base):
         BigInteger, ForeignKey("proyecto.id_proyecto", ondelete="CASCADE", onupdate="CASCADE"), index=True
     )
     perfil_requerido: Mapped[str] = mapped_column(String(100))
-    horas_asignadas: Mapped[Decimal] = mapped_column(Numeric(8, 2))
-    porcentaje_utilizacion: Mapped[Decimal] = mapped_column(Numeric(5, 2))
 
     usuario: Mapped[Usuario] = relationship(back_populates="asignaciones")
     etapa: Mapped[EtapaProyecto] = relationship(back_populates="asignaciones")
@@ -54,6 +49,10 @@ class ProyectoEmpresaImpactada(Base):
         ForeignKey("empresa.id_empresa", ondelete="CASCADE", onupdate="CASCADE"),
         primary_key=True,
         index=True,
+    )
+    # Nulo solo en registros anteriores a que se pidiera el área.
+    id_area: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("area.id_area", ondelete="RESTRICT", onupdate="CASCADE"), index=True
     )
     nivel_impacto: Mapped[str] = mapped_column(String(20))
     notas_impacto: Mapped[str | None] = mapped_column(Text)

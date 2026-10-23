@@ -42,7 +42,7 @@ Constituyen los bloques fundamentales (*building blocks*) del sistema. Existen p
 *   **Empresa**: Representa las filiales y entidades legales pertenecientes al grupo empresarial.
     *   *Atributos clave*: `id_empresa`, `nombre_empresa`, `division`, `grupo`, `activo`.
 *   **Usuario**: Colaboradores operativos de las áreas de negocio y recursos técnicos de DTI (Analistas, Desarrolladores, Testers, Arquitectos).
-    *   *Atributos clave*: `id_usuario`, `nombre`, `correo`, `perfil_tecnico`, `capacidad_horas_semanales`, `activo`.
+    *   *Atributos clave*: `id_usuario`, `nombre`, `correo`, `id_puesto`, `departamento`, `skills`, `capacidad_horas_semanales`, `activo`.
 
 ### 2.2. Entidades Dependientes y Características
 Entidades cuyo significado e identificación presuponen la existencia de una entidad padre o extienden detalles del ciclo de vida.
@@ -52,7 +52,7 @@ Entidades cuyo significado e identificación presuponen la existencia de una ent
 *   **SolicitudDemanda**: Captura inicial de necesidades funcionales previa a la formalización del proyecto.
     *   *Atributos clave*: `id_solicitud`, `id_usuario_solicitante`, `id_empresa`, `id_area`, `descripcion_necesidad`, `fecha_solicitud`, `estado_demanda`.
 *   **Proyecto**: Registro maestro de la iniciativa aprobada y en ejecución.
-    *   *Atributos clave*: `id_proyecto`, `id_solicitud`, `lider_id`, `nombre_proyecto`, `problema_oportunidad`, `objetivo`, `alcance`, `fuera_de_alcance`, `estado_proyecto`, `fecha_tentativa`, `fecha_comprometida`, `fecha_real_cierre`, `semaforo`.
+    *   *Atributos clave*: `id_proyecto`, `id_solicitud`, `lider_id`, `nombre_proyecto`, `problema_oportunidad`, `objetivo`, `alcance`, `fuera_de_alcance`, `etapa_actual`, `estado_proyecto`, `porcentaje_avance`, `fecha_tentativa`, `fecha_comprometida`, `fecha_real_cierre`, `semaforo`.
 *   **BusinessCase**: Justificación cualitativa y cuantitativa de beneficios esperados.
     *   *Atributos clave*: `id_business_case`, `id_proyecto`, `ahorro_estimado`, `costo_evitado_estimado`, `capacidad_liberada_horas`, `incremento_ingreso_estimado`, `beneficios_cualitativos`, `riesgos_cumplimiento`.
 *   **EvaluacionFinanciera**: Modelo estricto de costos e indicadores de retorno de inversión.
@@ -112,12 +112,23 @@ Catálogo de usuarios del sistema y recursos asignables de DTI.
 | Campo | Tipo de Dato | Nulo | Clave / Restricción | Descripción |
 | :--- | :--- | :---: | :--- | :--- |
 | `id_usuario` | `BIGINT` | No | `PK` | Identificador único del usuario. |
-| `id_area` | `BIGINT` | No | `FK -> area(id_area)` | Área de adscripción del colaborador. |
+| `id_puesto` | `BIGINT` | Sí* | `FK -> puesto(id_puesto)` | Puesto en la empresa (catálogo administrable). |
+| `departamento` | `VARCHAR(50)` | Sí* | `CHECK (departamento IN ('Dirección', 'Infraestructura', 'Procesos', 'Desarrollo de Software'))` | Área de la DTI a la que pertenece. |
 | `nombre` | `VARCHAR(150)` | No | — | Nombre completo del usuario. |
 | `correo` | `VARCHAR(150)` | No | `UNIQUE` | Correo electrónico institucional. |
-| `perfil_tecnico` | `VARCHAR(100)` | No | `CHECK (perfil_tecnico IN ('Análisis Funcional', 'Backend', 'Frontend', 'Testing', 'Infraestructura', 'Líder', 'Cliente'))` | Perfil o especialidad técnica. |
+| `skills` | `VARCHAR(50)[]` | No | `DEFAULT '{}'` | Etiquetas de habilidades (Python, Redes, ITIL…). |
 | `capacidad_horas_semanales` | `NUMERIC(5,2)` | No | `CHECK (capacidad_horas_semanales >= 0)` | Horas semanales disponibles de trabajo. |
 | `activo` | `BOOLEAN` | No | `DEFAULT true` | Indicador de cuenta activa. |
+
+\* Nulos solo en registros anteriores a la migración 0002; la API los exige al crear.
+
+**Tabla `puesto`** — catálogo de puestos de la DTI: `id_puesto` (`BIGINT`, PK), `nombre_puesto` (`VARCHAR(100)`, `UNIQUE`). Un puesto no puede eliminarse mientras alguna persona lo tenga asignado (`ON DELETE RESTRICT`).
+
+**Equipo (migración 0003)**
+- `usuario` añade: `tipo_recurso` (`Interno`/`Externo`/`Activo`), `id_jefe` (FK a `usuario`, `ON DELETE SET NULL`, sin ciclos ni autorreferencia), `rol` (`Director`/`Gerente`/`Colaborador`), `porcentaje_proyectos` (0–100, default 100), `costo_hora`, `proveedor`, `fecha_fin_contrato`. `correo` pasa a ser opcional (activos).
+- `skill` (`id_skill`, `nombre` UNIQUE) y `usuario_skill` (PK `id_usuario`+`id_skill`, `nivel` `Básico`/`Intermedio`/`Experto`); reemplazan el arreglo `usuario.skills`.
+- `ausencia` (`id_usuario`, `tipo`, `fecha_inicio`, `fecha_fin` ≥ inicio, `nota`).
+- `bitacora` (append-only): `fecha`, `id_actor`, `actor_nombre`, `entidad`, `id_entidad`, `id_usuario_afectado`, `accion`, `resumen`, `cambios` JSONB.
 
 ### 3.4. Tabla: `solicitud_demanda`
 Fase preliminar de captura de iniciativas.
@@ -145,7 +156,9 @@ Registro maestro de iniciativas aprobadas.
 | `objetivo` | `TEXT` | No | — | Meta cuantitativa o cualitativa. |
 | `alcance` | `TEXT` | No | — | Inclusiones explícitas del proyecto. |
 | `fuera_de_alcance` | `TEXT` | No | — | Exclusiones explícitas del proyecto. |
-| `estado_proyecto` | `VARCHAR(50)` | No | `CHECK (estado_proyecto IN ('Iniciación', 'Planeación', 'Ejecución', 'Cierre', 'Cancelado', 'Pausado'))` | Estado del ciclo de vida. |
+| `etapa_actual` | `VARCHAR(100)` | No | `CHECK (etapa_actual IN ('Análisis y Viabilidad', 'Diseño y Planificación', 'Construcción y Ejecución', 'Pruebas y Validación', 'Despliegue y Cierre'))` | Macro-etapa actual del ciclo de vida. |
+| `estado_proyecto` | `VARCHAR(50)` | No | `CHECK (estado_proyecto IN ('Sin Iniciar', 'Activo', 'En Revisión', 'Pausado', 'Bloqueado', 'Cancelado', 'Completado'))` | Estatus ("salud") en la etapa actual; los permitidos dependen de la etapa. |
+| `porcentaje_avance` | `NUMERIC(5,2)` | No | `CHECK (porcentaje_avance BETWEEN 0 AND 100)`, default `0` | Debe caer en el rango de la etapa actual. |
 | `fecha_tentativa` | `DATE` | Sí | — | Estimación inicial antes del análisis. |
 | `fecha_comprometida` | `DATE` | Sí | — | Fecha pactada tras capacidad y alcance. |
 | `fecha_real_cierre` | `DATE` | Sí | — | Fecha efectiva de liberación a producción. |
@@ -207,13 +220,13 @@ Fases metodológicas de un proyecto.
 | :--- | :--- | :---: | :--- | :--- |
 | `id_etapa` | `BIGINT` | No | `PK` | Identificador de la etapa. |
 | `id_proyecto` | `BIGINT` | No | `FK -> proyecto(id_proyecto)` | Proyecto padre. |
-| `nombre_etapa` | `VARCHAR(100)` | No | `CHECK (nombre_etapa IN ('Análisis', 'Arquitectura', 'Desarrollo', 'Testing', 'Implementación'))` | Fase metodológica. |
+| `nombre_etapa` | `VARCHAR(100)` | No | `CHECK (nombre_etapa IN ('Análisis y Viabilidad', 'Diseño y Planificación', 'Construcción y Ejecución', 'Pruebas y Validación', 'Despliegue y Cierre'))` | Macro-etapa; todo proyecto tiene las cinco. |
 | `orden_secuencia` | `INTEGER` | No | `CHECK (orden_secuencia > 0)` | Posición correlativa de la etapa. |
 | `horas_estimadas` | `NUMERIC(8,2)` | No | `CHECK (horas_estimadas >= 0)` | Esfuerzo planificado en horas. |
 | `horas_efectivas_reales` | `NUMERIC(8,2)` | No | `DEFAULT 0.00` | Esfuerzo consumido acumulado. |
 | `fecha_inicio_est` | `DATE` | Sí | — | Fecha programada de inicio. |
 | `fecha_fin_est` | `DATE` | Sí | — | Fecha programada de conclusión. |
-| `estado_etapa` | `VARCHAR(50)` | No | `CHECK (estado_etapa IN ('Pendiente', 'En Curso', 'Detenido', 'Completado'))` | Estado de ejecución. |
+| `estado_etapa` | `VARCHAR(50)` | No | `CHECK (estado_etapa IN ('Sin Iniciar', 'Activo', 'En Revisión', 'Pausado', 'Bloqueado', 'Cancelado', 'Completado'))` | Sincronizado con el ciclo del proyecto. |
 
 ### 3.10. Tabla: `hito_entregable`
 Entregables verificables del proyecto.
@@ -303,6 +316,7 @@ Resuelve la relación Muchos-a-Muchos ($M:N$) entre `proyecto` y `empresa`.
 | :--- | :--- | :---: | :--- | :--- |
 | `id_proyecto` | `BIGINT` | No | `PK, FK -> proyecto(id_proyecto)` | Proyecto que genera impacto. |
 | `id_empresa` | `BIGINT` | No | `PK, FK -> empresa(id_empresa)` | Empresa receptora del impacto. |
+| `id_area` | `BIGINT` | Sí | `FK -> area(id_area)` | Área impactada de esa empresa (obligatoria por API; nula en registros anteriores). |
 | `nivel_impacto` | `VARCHAR(20)` | No | `CHECK (nivel_impacto IN ('Alto', 'Medio', 'Bajo'))` | Severidad o relevancia estratégica. |
 | `notas_impacto` | `TEXT` | Sí | — | Detalle cualitativo del beneficio. |
 
@@ -358,10 +372,10 @@ Para un esquema de relación $R$, el conjunto de atributos $Y$ depende funcional
 
 *   `id_empresa` $\rightarrow$ `nombre_empresa`, `division`, `grupo`, `activo`
 *   `id_area` $\rightarrow$ `nombre_area`, `codigo_area`, `id_empresa`
-*   `id_usuario` $\rightarrow$ `nombre`, `correo`, `perfil_tecnico`, `capacidad_horas_semanales`, `id_area`, `activo`
+*   `id_usuario` $\rightarrow$ `nombre`, `correo`, `id_puesto`, `departamento`, `skills`, `capacidad_horas_semanales`, `activo`
 *   `id_proyecto` $\rightarrow$ `nombre_proyecto`, `problema_oportunidad`, `objetivo`, `alcance`, `fuera_de_alcance`, `estado_proyecto`, `lider_id`, `semaforo`
 *   `id_evaluacion` $\rightarrow$ `id_proyecto`, `costo_desarrollo`, `costo_implementacion`, `inversion_total`, `beneficio_neto`, `roi`
-*   (`id_proyecto`, `id_empresa`) $\rightarrow$ `nivel_impacto`, `notas_impacto`
+*   (`id_proyecto`, `id_empresa`) $\rightarrow$ `id_area`, `nivel_impacto`, `notas_impacto`
 *   (`id_usuario`, `id_etapa`) $\rightarrow$ `perfil_requerido`, `horas_asignadas`, `porcentaje_utilizacion`
 
 ### 5.2. Evaluación de Formas Normales (1NF a 3NF / BCNF)

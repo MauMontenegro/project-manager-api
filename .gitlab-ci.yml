@@ -88,7 +88,9 @@ migrate:production:
     - |
       gcloud run deploy "$RUN_SERVICE" \
         --image "$IMAGE:$CI_COMMIT_SHORT_SHA" \
-        --set-env-vars "^@^DATABASE_URL=${APP_DATABASE_URL}@CORS_ORIGINS=${CORS_ORIGINS}" \
+        --set-env-vars "^@^DATABASE_URL=${APP_DATABASE_URL}@CORS_ORIGINS=${CORS_ORIGINS}@AUTH_ENABLED=${AUTH_ENABLED:-false}@FIREBASE_PROJECT_ID=${GCP_PROJECT_ID}@BOOTSTRAP_ADMIN_EMAILS=${BOOTSTRAP_ADMIN_EMAILS:-[]}@ASISTENTE_URL=${ASISTENTE_URL:-}@ASISTENTE_IAM=true" \
+        --set-secrets "SECRET_KEY=${SECRETO_SESIONES:-pm-api-secret-key}:latest,ASISTENTE_CLAVE=${SECRETO_AGENTE:-pm-agente-clave}:latest" \
+        ${RUN_SERVICE_ACCOUNT:+--service-account "$RUN_SERVICE_ACCOUNT"} \
         $RUN_EXTRA_FLAGS \
         --port 8080 \
         --min-instances 0 \

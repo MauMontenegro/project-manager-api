@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
-from app.api.v1.router import api_router
+from app.api.v1.router import api_router, public_router
 from app.core.config import settings
 from app.core.database import engine
 from app.core.exceptions import DomainError
@@ -48,4 +48,5 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+app.include_router(public_router, prefix=settings.API_V1_PREFIX)
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)

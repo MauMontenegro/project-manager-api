@@ -6,6 +6,14 @@ class DomainError(Exception):
         self.detail = detail
 
 
+class UnauthorizedError(DomainError):
+    status_code = 401
+
+
+class ForbiddenError(DomainError):
+    status_code = 403
+
+
 class NotFoundError(DomainError):
     status_code = 404
 
@@ -16,3 +24,11 @@ class ConflictError(DomainError):
 
 class BusinessRuleError(DomainError):
     status_code = 422
+
+
+class TooManyRequestsError(DomainError):
+    status_code = 429
+
+
+class ServiceUnavailableError(DomainError):
+    status_code = 503

@@ -3,14 +3,52 @@ from enum import StrEnum
 from sqlalchemy import CheckConstraint
 
 
-class PerfilTecnico(StrEnum):
-    ANALISIS_FUNCIONAL = "Análisis Funcional"
-    BACKEND = "Backend"
-    FRONTEND = "Frontend"
-    TESTING = "Testing"
+class Departamento(StrEnum):
+    """Áreas de la DTI a las que puede pertenecer una persona del Equipo."""
+
+    DIRECCION = "Dirección"
     INFRAESTRUCTURA = "Infraestructura"
+    PROCESOS = "Procesos"
+    DESARROLLO_SOFTWARE = "Desarrollo de Software"
+
+
+class DepartamentoProyecto(StrEnum):
+    """Departamentos que tienen su propio espacio de proyectos (todos menos Dirección)."""
+
+    INFRAESTRUCTURA = "Infraestructura"
+    PROCESOS = "Procesos"
+    DESARROLLO_SOFTWARE = "Desarrollo de Software"
+
+
+class TipoRecurso(StrEnum):
+    INTERNO = "Interno"
+    EXTERNO = "Externo"
+    ACTIVO = "Activo"
+
+
+class RolSistema(StrEnum):
+    """Rol de acceso: Administrador ve y gestiona todo; Gerente, su departamento (personas, proyectos y
+    configuración); Líder, crea proyectos en su departamento y gestiona los que lidera; Usuario, consulta y
+    trabaja sus propias tareas."""
+
+    ADMINISTRADOR = "Administrador"
+    GERENTE = "Gerente"
     LIDER = "Líder"
-    CLIENTE = "Cliente"
+    USUARIO = "Usuario"
+
+
+class NivelSkill(StrEnum):
+    BASICO = "Básico"
+    INTERMEDIO = "Intermedio"
+    EXPERTO = "Experto"
+
+
+class TipoAusencia(StrEnum):
+    VACACIONES = "Vacaciones"
+    PERMISO = "Permiso"
+    INCAPACIDAD = "Incapacidad"
+    CAPACITACION = "Capacitación"
+    OTRO = "Otro"
 
 
 class EstadoDemanda(StrEnum):
@@ -24,12 +62,18 @@ class EstadoDemanda(StrEnum):
 
 
 class EstadoProyecto(StrEnum):
-    INICIACION = "Iniciación"
-    PLANEACION = "Planeación"
-    EJECUCION = "Ejecución"
-    CIERRE = "Cierre"
-    CANCELADO = "Cancelado"
+    """Estatus ("salud") del proyecto en su etapa actual. Las etapas usan los mismos valores."""
+
+    SIN_INICIAR = "Sin Iniciar"
+    ACTIVO = "Activo"
+    EN_REVISION = "En Revisión"
     PAUSADO = "Pausado"
+    BLOQUEADO = "Bloqueado"
+    CANCELADO = "Cancelado"
+    COMPLETADO = "Completado"
+
+
+EstadoEtapa = EstadoProyecto
 
 
 class Semaforo(StrEnum):
@@ -39,18 +83,30 @@ class Semaforo(StrEnum):
 
 
 class NombreEtapa(StrEnum):
-    ANALISIS = "Análisis"
-    ARQUITECTURA = "Arquitectura"
-    DESARROLLO = "Desarrollo"
-    TESTING = "Testing"
-    IMPLEMENTACION = "Implementación"
+    """Macro-etapas por defecto: plantilla inicial de las etapas de cada departamento."""
+
+    ANALISIS = "Análisis y Viabilidad"
+    DISENO = "Diseño y Planificación"
+    CONSTRUCCION = "Construcción y Ejecución"
+    PRUEBAS = "Pruebas y Validación"
+    DESPLIEGUE = "Despliegue y Cierre"
 
 
-class EstadoEtapa(StrEnum):
+class EstadoTarea(StrEnum):
+    """Columnas del kanban. Solo `Finalizado` cuenta para el avance."""
+
     PENDIENTE = "Pendiente"
-    EN_CURSO = "En Curso"
-    DETENIDO = "Detenido"
-    COMPLETADO = "Completado"
+    EN_PROGRESO = "En progreso"
+    EN_REVISION = "En revisión"
+    FINALIZADO = "Finalizado"
+
+
+class Frecuencia(StrEnum):
+    """Periodicidad de una tarea recurrente: genera una tarea por día laborable, semana o mes."""
+
+    DIARIA = "Diaria"
+    SEMANAL = "Semanal"
+    MENSUAL = "Mensual"
 
 
 class EstadoHito(StrEnum):
@@ -70,6 +126,8 @@ class CausaRaiz(StrEnum):
     RETRABAJO = "Retrabajo"
     ESPERA_CLIENTE = "Espera del Cliente"
     DECISION_PENDIENTE = "Decisión Pendiente"
+    # La registra el sistema: la tarea llegó a su fecha de inicio con dependencias sin terminar.
+    DEPENDENCIA_INTERNA = "Dependencia Interna"
 
 
 class ResponsableOrigen(StrEnum):

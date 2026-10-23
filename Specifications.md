@@ -19,9 +19,9 @@ Necesito que desarrolles la estructura completa y el código base para el Backen
 El backend debe implementar las siguientes 17 entidades relacionales con sus respectivas relaciones y FKs:
 1. **empresa** (`id_empresa`, `nombre_empresa`, `division`, `grupo`, `fecha_creacion`)
 2. **area** (`id_area`, `nombre_area`, `id_empresa`)
-3. **usuario** (`id_usuario`, `nombre`, `correo`, `perfil_tecnico`, `capacidad_horas_semanales`, `id_area`, `activo`)
+3. **usuario** (`id_usuario`, `nombre`, `correo`, `id_puesto`, `departamento`, `skills`, `capacidad_horas_semanales`, `activo`) + catálogo **puesto** (`id_puesto`, `nombre_puesto`)
 4. **solicitud_demanda** (`id_solicitud`, `descripcion_necesidad`, `fecha_solicitud`, `estado_demanda`, `id_usuario_solicitante`, `id_empresa`, `id_area`)
-5. **proyecto** (`id_proyecto`, `nombre_proyecto`, `problema_oportunidad`, `objetivo`, `alcance`, `fuera_de_alcance`, `estado_proyecto`, `fecha_tentativa`, `fecha_comprometida`, `fecha_real_cierre`, `semaforo`, `id_solicitud` [UNIQUE], `lider_id`)
+5. **proyecto** (`id_proyecto`, `nombre_proyecto`, `problema_oportunidad`, `objetivo`, `alcance`, `fuera_de_alcance`, `etapa_actual`, `estado_proyecto`, `porcentaje_avance`, `fecha_tentativa`, `fecha_comprometida`, `fecha_real_cierre`, `semaforo`, `id_solicitud` [UNIQUE], `lider_id`)
 6. **business_case** (`id_business_case`, `ahorro_estimado`, `costo_evitado_estimado`, `capacidad_liberada_horas`, `incremento_ingreso_estimado`, `beneficios_cualitativos`, `id_proyecto` [UNIQUE])
 7. **evaluacion_financiera** (`id_evaluacion`, `costo_desarrollo`, `costo_implementacion`, `costo_consultoria`, `costo_licencias`, `costo_infraestructura`, `costo_horas_internas`, `costo_mantenimiento`, `inversion_total`, `beneficio_bruto`, `beneficio_neto`, `roi`, `payback`, `relacion_costo_beneficio`, `id_proyecto` [UNIQUE])
 8. **etapa_proyecto** (`id_etapa`, `nombre_etapa`, `orden_secuencia`, `horas_estimadas`, `horas_efectivas_reales`, `fecha_inicio_est`, `fecha_fin_est`, `estado_etapa`, `id_proyecto`)
@@ -32,7 +32,7 @@ El backend debe implementar las siguientes 17 entidades relacionales con sus res
 13. **compromiso_cliente** (`id_compromiso`, `descripcion_actividad`, `fecha_limite_compromiso`, `fecha_cumplimiento_real`, `estado_compromiso`, `id_proyecto`, `id_area_cliente`)
 14. **realizacion_valor** (`id_valor`, `impacto_estimado`, `impacto_comprometido`, `impacto_aprobado`, `impacto_realizado`, `fecha_validacion`, `id_proyecto`)
 15. **asignacion_recurso** (Junction Table M:N: `id_asignacion`, `id_usuario`, `id_etapa`, `id_proyecto`, `perfil_requerido`, `horas_asignadas`, `porcentaje_utilizacion`)
-16. **proyecto_empresa_impactada** (Junction Table M:N: PK Compuesta [`id_proyecto`, `id_empresa`], `nivel_impacto`, `notas_impacto`)
+16. **proyecto_empresa_impactada** (Junction Table M:N: PK Compuesta [`id_proyecto`, `id_empresa`], `id_area`, `nivel_impacto`, `notas_impacto`)
 17. **proyecto_dependencia** (Junction Table M:N Autorreferenciada: PK Compuesta [`id_proyecto_origen`, `id_proyecto_dependiente`], `tipo_dependencia`, `descripcion_dependencia`)
 
 ---

@@ -24,6 +24,15 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-petroil}
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
+      LOCAL_ID_USUARIO: ${LOCAL_ID_USUARIO:-}
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      SECRET_KEY: ${SECRET_KEY:-}
+      SESION_HORAS: ${SESION_HORAS:-12}
+      BOOTSTRAP_ADMIN_EMAILS: ${BOOTSTRAP_ADMIN_EMAILS:-[]}
+      ASISTENTE_URL: ${ASISTENTE_URL:-}
+      ASISTENTE_CLAVE: ${ASISTENTE_CLAVE:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8000:8000"
     depends_on:

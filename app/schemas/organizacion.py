@@ -27,3 +27,20 @@ class AreaRead(AreaCreate):
     model_config = ConfigDict(from_attributes=True)
 
     id_area: int
+
+
+class EliminarEmpresasIn(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=500)
+
+
+class EmpresaNoEliminada(BaseModel):
+    id_empresa: int
+    nombre_empresa: str | None
+    motivo: str
+
+
+class EmpresasEliminadas(BaseModel):
+    """Se eliminan las que no están en uso; las demás se reportan con su motivo."""
+
+    eliminadas: list[int]
+    no_eliminadas: list[EmpresaNoEliminada]

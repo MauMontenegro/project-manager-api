@@ -46,6 +46,16 @@ Proyecto → *Settings → CI/CD → Variables → Add variable*:
 | `APP_DATABASE_URL` | Variable | ver abajo | Protected |
 | `CORS_ORIGINS` | Variable | `["https://tu-frontend.com"]` (JSON) | |
 | `RUN_EXTRA_FLAGS` | Variable (opcional) | flags extra de `gcloud run`, p. ej. red VPC | |
+| `AUTH_ENABLED` | Variable | `true` para exigir inicio de sesión (Firebase). Default `false`: **la API queda abierta**. | |
+| `BOOTSTRAP_ADMIN_EMAILS` | Variable | `["director@empresa.com"]` (JSON): entran como Director aunque no estén en el Equipo | |
+| `ASISTENTE_URL` | Variable (opcional) | URL del servicio `project-manager-agent[-dev]` en Cloud Run. Vacío: la app no muestra el asistente. | |
+| `RUN_SERVICE_ACCOUNT` | Variable (opcional) | Cuenta de servicio con la que corre la API. Debe poder leer los secretos y debe ser la que tiene `run.invoker` sobre el agente. | |
+
+Secretos en Secret Manager que el deploy monta (los crea `project-manager-agent/infra/preparar-gcp.sh`):
+- `pm-api-secret-key` → `SECRET_KEY`: firma de sesiones. Es obligatorio con `AUTH_ENABLED=true`.
+- `pm-agente-clave` → `ASISTENTE_CLAVE`: clave compartida con el agente.
+
+Para usar otros nombres, define `SECRETO_SESIONES` y `SECRETO_AGENTE`. La API llama al agente con su identidad de Google (`ASISTENTE_IAM=true`). Ver `project-manager-agent/DEPLOY.md`.
 
 `APP_DATABASE_URL`:
 
@@ -98,3 +108,10 @@ La API aún **no tiene autenticación propia**. Un navegador no puede enviar un 
 - **`PERMISSION_DENIED` en `gcloud builds submit` o `run deploy`:** faltan roles en `cloud-run-gitlab` (paso 1). Si el error nombra a la cuenta de Compute (`842403446987-compute@...`), esa cuenta, que ejecuta Cloud Build, necesita `roles/artifactregistry.writer` y `roles/logging.logWriter`.
 - **El servicio no conecta a la BD:** revisa que `APP_DATABASE_URL` esté completa y bien codificada, y que la BD sea alcanzable desde Cloud Run (firewall, VPC egress).
 - **Migración fallida:** el deploy no continúa; revisa los logs del job `*-migrate` en Cloud Run → Jobs.
+
+## Autenticación (Firebase Auth)
+
+1. Consola de Firebase del proyecto `innovacion-futuro` → *Authentication* → habilita los proveedores **Google** y **Microsoft** (este último con un registro de app en Entra ID).
+2. *Authentication → Settings → Authorized domains*: agrega el dominio del frontend.
+3. Frontend (`.env`): `VITE_AUTH_ENABLED=true`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID` (y opcional `VITE_MICROSOFT_TENANT`).
+4. API (GitLab): `AUTH_ENABLED=true` y `BOOTSTRAP_ADMIN_EMAILS` con el correo del Director para el primer acceso. Después, da de alta al Director en Equipo con rol `Director`; el acceso de cada persona depende de su `correo` y `rol`.
